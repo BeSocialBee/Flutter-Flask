@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'createUsername.dart';
 
 // for web add http: ^0.13.3 to dependeciens in pubspec.yaml, run : flutter pub get
 
@@ -48,66 +49,58 @@ class _LoginSignupPageState extends State<LoginSignupPage> {
     // Validate the email format
     if (!_isEmailValid(email)) {
       // Display an error message using an alert dialog
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Invalid Email'),
-            content: Text('Please enter a valid email address.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close the alert dialog
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      showCustomDialog("Please enter a valid email address.");
       return; // Exit the function early if the email is invalid
     }
 
-    // Add your authentication logic here
-    String apiUrl = 'http://127.0.0.1:5000/flutter_auth';
-    // Make a POST request to your backend with email and password
-    try {
-      var response = await http.post(
-        Uri.parse(apiUrl),
-        body: {
-          'email': email,
-          'password': password,
-          '_isLoginForm': _isLoginForm.toString(),
-        },
-      );
+    if (password.length < 6) {
+      showCustomDialog("Password must be longer than six characters.");
+    } else {
+      // Add your authentication logic here
+      String apiUrl = 'http://127.0.0.1:5000/flutter_auth';
+      // Make a POST request to your backend with email and password
+      try {
+        var response = await http.post(
+          Uri.parse(apiUrl),
+          body: {
+            'email': email,
+            'password': password,
+            '_isLoginForm': _isLoginForm.toString(),
+          },
+        );
 
-      // Check the response status
-      if (response.statusCode == 200) {
-        // Successful authentication
-        // Standard HTTP status code for success
-        final responseData = json.decode(response.body);
-        final customStatusCode = responseData['status_code'];
-        final customMessage = responseData['message'];
+        // Check the response status
+        if (response.statusCode == 200) {
+          // Successful authentication
+          // Standard HTTP status code for success
+          final responseData = json.decode(response.body);
+          final customStatusCode = responseData['status_code'];
+          final customMessage = responseData['message'];
 
-        // Succesfful Login
-        if (customStatusCode == 1) {
-          print(customMessage);
-        } else if (customStatusCode == 2 || customStatusCode == 3) {
-          // CustomCode 2 :  Email or password is incorrect, alert message
-          // CustomCode 3 : Email exist in databas, alert message
-          showCustomDialog(customMessage);
+          // Succesfful Login
+          if (customStatusCode == 1) {
+            print(customMessage);
+          } else if (customStatusCode == 2 || customStatusCode == 3) {
+            // CustomCode 2 :  Email or password is incorrect, alert message
+            // CustomCode 3 : Email exist in databas, alert message
+            showCustomDialog(customMessage);
+          }
+          // Succesfful Sign Up
+          else if (customStatusCode == 4) {
+            // Navigate to the UsernamePage
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => usernamePage()),
+            );
+          }
+        } else {
+          // Handle authentication failure
+          print('Authentication failed: ${response.body}');
         }
-        // Succesfful Sign Up
-        else if (customStatusCode == 3) {
-          print(customMessage);
-        }
-      } else {
-        // Handle authentication failure
-        print('Authentication failed: ${response.body}');
+      } catch (e) {
+        // Handle any network or server errors
+        print('Error: $e');
       }
-    } catch (e) {
-      // Handle any network or server errors
-      print('Error: $e');
     }
   }
 
